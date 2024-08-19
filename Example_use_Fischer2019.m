@@ -1,14 +1,11 @@
 %-------------------------------------------------------------------------%
-% Copyright (c) 2020 Modenese L.                                          %
-%    Author:   Luca Modenese,  2020                                       %
-%    email:    l.modenese@imperial.ac.uk                                  %
+% Copyright (c) 2024 MCM Fischer.                                         %
+%    Author:   Maximilian C. M. Fischer,  2024                            %
+%    email:    N/A                                                        %
 % ----------------------------------------------------------------------- %
-% This example demonstrates how to setup a STAPLE workflow including 
-% morphological analyses performed with the algorithms published by Kai et
-% al. JBiomech (2014).
-% In our experience these algorithms are more robust with low-quality
-% bone geometries. The MC22 anatomical dataset presents the worst quality
-% geometries among the provided datasets.
+% This example demonstrates how to setup a STAPLE workflow using an       %
+% algorithm for the morphological analyses of the pelvis published by     %
+% Fischer et al. https://doi.org/10.1038/s41598-019-49573-4               %
 % ----------------------------------------------------------------------- %
 clear; clc; close all
 addpath(genpath('./STAPLE'));
@@ -29,8 +26,6 @@ dataset_set = {'JIA_MRI'};
 subj_mass = 76.5; %kg
 
 % cell array with the bone geometries that you would like to process
-% no foot or ankle here, as foot is a unique geometry including everything
-% below tibia and cannot be processed at the moment.
 bones_list = {'pelvis','femur_r'};
 
 % visualization geometry format (options: 'stl' or 'obj')
@@ -82,7 +77,7 @@ for n_d = 1:numel(dataset_set)
     osimModel = addBodiesFromTriGeomBoneSet(osimModel, triGeom_set, geometry_folder_name, vis_geom_format);
     
     % process bone geometries (compute joint parameters and identify markers)
-    %                                                         pelvis    femur     tibia 
+    %                                                         pelvis       femur     tibia 
     [JCS, BL, CS] = processTriGeomBoneSet(triGeom_set, side, 'Fischer2019','Kai2014','Kai2014');
     
     % create joints
