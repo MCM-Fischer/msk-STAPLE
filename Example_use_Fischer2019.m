@@ -25,7 +25,11 @@ dataset_set = {'JIA_MRI'};
 % H = ?; %cm
 subj_mass = 76.5; %kg
 
-% cell array with the bone geometries that you would like to process
+% Cell array with the bone geometries that you would like to process
+% NOTE: The complete pelvis mesh including both hip bones and the sacrum is
+% required for the algorithm of [Fischer 2019]. Consider the requirements 
+% for the mesh of the pelvis described in the document header of the 
+% fuction pelvicLandmarkID.
 bones_list = {'pelvis','femur_r'};
 
 % visualization geometry format (options: 'stl' or 'obj')

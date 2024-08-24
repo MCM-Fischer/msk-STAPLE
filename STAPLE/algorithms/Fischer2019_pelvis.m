@@ -1,6 +1,6 @@
 function [BCS, JCS, PelvisBL] = Fischer2019_pelvis(Pelvis, side_raw, ...
     result_plots, debug_plots, in_mm)
-%FISCHER2019_pelvis Calculation of the pelvic CS based on [Fischer 2019].
+%FISCHER2019_PELVIS Calculation of the pelvic CS based on [Fischer 2019].
 %
 %   This is a wrapper function to integrate the MATLAB function: 
 %       https://github.com/RWTHmediTEC/PelvicLandmarkIdentification
@@ -12,7 +12,7 @@ function [BCS, JCS, PelvisBL] = Fischer2019_pelvis(Pelvis, side_raw, ...
 %       https://doi.org/10.1038/s41598-019-49573-4
 %
 %   ATTENTION: Consider the requirements for the mesh of the pelvis 
-%   described in the document header of pelvicLandmarkID.
+%   described in the document header of the fuction pelvicLandmarkID.
 %
 % AUTHOR: Maximilian C. M. Fischer
 % VERSION: 1.0.0
@@ -27,8 +27,9 @@ if nargin<4;    debug_plots = 0;   end
 if nargin<5;    in_mm = 1;         end
 if in_mm == 1;  dim_fact = 0.001;  else;  dim_fact = 1; end
 
-% get side id correspondent to body side (used for hip joint parent)
-% no need for sign, left and right rf are identical
+% Get side identifier correspondent to the body side (used for hip joint 
+% parent). No need for the sign because left and right reference systems 
+% are identical
 [~, side_low] = bodySide2Sign(side_raw);
 
 disp('---------------------')
@@ -42,71 +43,74 @@ disp(['* Triang Units: ', 'mm']);
 disp('---------------------')
 disp('Initializing method...')
 
-% inertial axes
-[~, CenterVol, InertiaMatrix] =  TriInertiaPpties(Pelvis);
-
+% Convert from MATLAB triangulation to mesh struct.
 pelvisMesh.vertices = Pelvis.Points;
 pelvisMesh.faces = Pelvis.ConnectivityList;
 
 disp('Landmarking...')
 
-[~, Landmarks] = pelvicLandmarkID(pelvisMesh, 'visu',0, 'CS','APP' ,'debug',debug_plots);
+% Run [Fischer 2019]
+[~, Landmarks] = pelvicLandmarkID(pelvisMesh, ...
+    'visu',debug_plots, 'CS','APP' ,'debug',debug_plots);
 
+% Extract the landmarks from the landmarks struct
 LASIS = Landmarks.ASIS(1,:);
 RASIS = Landmarks.ASIS(2,:);
 LPSIS = Landmarks.PSIS(1,:);
 RPSIS = Landmarks.PSIS(2,:);
 SYMP = Landmarks.PS;
 
-% Sanity check if bone landmarks were correctly identified
+% Sanity check if superior iliac spine (SIS) landmarks were correctly identified
 if norm(RASIS-LASIS)<norm(RPSIS-LPSIS)
-    % inform user
-    disp('GIBOK_pelvis.')
-    warndlg('Inter-ASIS distance is shorter than inter-PSIS distance. Better check manually.')
+    disp('Fischer2019_pelvis:')
+    warndlg(['Inter-ASIS distance is shorter than inter-PSIS distance. ' ...
+        'Better check manually if the ASIS and PSIS landmarks were correctly detected.'])
 end
 
-% ISB reference system
-PelvisOr = (RASIS+LASIS)'/2.0;
-
-% segment reference system
+% Get centroid and inertia matrix
+[~, CenterVol, InertiaMatrix] =  TriInertiaPpties(Pelvis);
 BCS.CenterVol = CenterVol;
-BCS.Origin = PelvisOr;
 BCS.InertiaMatrix = InertiaMatrix;
-BCS.V = CS_pelvis_ISB(RASIS, LASIS, RPSIS, LPSIS);
-% CS.V = RotPseudoISB2Glob;
 
-% storing joint details
+% Origin of the ISB reference system. Midpoint between ASIS landmarks.
+PelvisOr = (RASIS+LASIS)'/2;
+BCS.Origin = PelvisOr;
+
+% Axes of the ISB reference system
+BCS.V = CS_pelvis_ISB(RASIS, LASIS, RPSIS, LPSIS);
+
+% Store joint details
 JCS.ground_pelvis.V = BCS.V;
 JCS.ground_pelvis.Origin = PelvisOr;
 JCS.ground_pelvis.child_location    = PelvisOr'*dim_fact; % [1x3] as in OpenSim
 JCS.ground_pelvis.child_orientation = computeXYZAngleSeq(BCS.V); % [1x3] as in OpenSim
 
-% define hip parent
+% Define hip parent
 hip_name = ['hip_', side_low];
 JCS.(hip_name).parent_orientation   = computeXYZAngleSeq(BCS.V);
 
-% Export bone landmarks: [3x1] vectors
-PelvisBL.RASI     = RASIS'; 
-PelvisBL.LASI     = LASIS'; 
-PelvisBL.RPSI     = RPSIS'; 
-PelvisBL.LPSI     = LPSIS'; 
-PelvisBL.SYMP     = SYMP';
+% Export bone landmarks as [3x1]
+PelvisBL.RASI = RASIS'; 
+PelvisBL.LASI = LASIS'; 
+PelvisBL.RPSI = RPSIS'; 
+PelvisBL.LPSI = LPSIS'; 
+PelvisBL.SYMP = SYMP';
 
-% debug plot
-label_switch = 1;
+% Result plot
 if result_plots == 1
-    figure('Name', ['STAPLE | bone: pelvis | side: ', side_low])
+    figure('Name', ['Fischer2019 | bone: pelvis | side: ', side_low])
     plotTriangLight(Pelvis, BCS, 0); hold on
     quickPlotRefSystem(BCS);
     quickPlotRefSystem(JCS.ground_pelvis);
     trisurf(triangulation([1 2 3],[RASIS; SYMP; LASIS]),...
         'facealpha',0.4,'facecolor','y','edgecolor','k');
     
-    % plot markers and labels
+    % Plot landmarks and labels
+    label_switch = 1;
     plotBoneLandmarks(PelvisBL, label_switch);
 end
 
-% final printout
+% Final printout
 disp('Done.');
 
 end
